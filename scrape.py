@@ -1,9 +1,10 @@
 import scrapy
 from selenium import webdriver
+from scrapy.selector import Selector
 
 
 class QuotesSpider(scrapy.Spider):
-    name = 'lcstspider'
+    name = 'lcsspider'
     start_urls = [
         'https://www.thescoreesports.com/lol/standings',
     ]
@@ -12,27 +13,18 @@ class QuotesSpider(scrapy.Spider):
         self.driver = webdriver.Firefox()
 
     def parse(self, response):
-        while True:
-            try:
-                self.driver.get('https://www.thescoreesports.com/lol/standings')
-                next = self.driver.find_element_by_xpath('//a/[contains(@tabindex, "1")]')
-                url = 'https://www.thescoreesports.com/lol/standings'
-                yield Request(url, callback=self.parse2)
-                next.click()
-            except:
-                break
+        self.driver.get(response.url)
+        # next = self.driver.find_element_by_xpath('//a/[contains(@tabindex, "1")]')
+        next = self.driver.find_element_by_css_selector('div[data-reactid="117"]')
+        next.click()
+        next = self.driver.find_element_by_css_selector('a[tabindex="1"]')
+        next.click()
+
         
-        self.drive.close()
-
-
-    def parse2(self, response):
-        for quote in response.css('tr[class^=StandingRow]'):
+        for quote in Selector(text=self.driver.page_source).css('tr[class^=StandingRow]'):
             yield {
                 'team': quote.css('td:nth-child(2) span::text').get(),
                 'score': quote.css('td:nth_child(3)::text').get()
-            }        
-
-        # next_page = response.css('a::attr("href")').get()
-        # if next_page is not None:
-        #     yield response.follow(next_page, self.parse)
-
+            }
+    
+        self.driver.close()
